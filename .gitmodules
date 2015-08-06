@@ -1,3 +1,6 @@
 [submodule "BuildInitialVM"]
 	path = BuildInitialVM
 	url = https://gist.github.com/2e91e82470e2a2e2f61d.git
+[submodule "PatchedVMplusWIM"]
+	path = PatchedVMplusWIM
+	url = https://gist.github.com/32aa670bdb2d744a704f.git
