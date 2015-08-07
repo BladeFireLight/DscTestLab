@@ -1,133 +1,9 @@
 #requires -Version 3 -Modules Dism, Hyper-V, ScheduledTasks
 
-#Wrapper arround Convert-WindowsImage script to it acts like a function. 
-function Convert-WindowsImage
-{
-  Param
-  (
-    [Parameter(ParameterSetName = 'SRC', Mandatory = $true, ValueFromPipeline = $true)]
-    [Alias('WIM')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({
-          Test-Path -Path $(Resolve-Path $_)
-        }
-    )]
-    $SourcePath,
+#region Import helper functions
 
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('VHD')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    $VHDPath,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('WorkDir')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({
-          Test-Path $_
-        }
-    )]
-    $WorkingDirectory = $pwd,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('Size')]
-    [UInt64]
-    [ValidateNotNullOrEmpty()]
-    [ValidateRange(512MB, 64TB)]
-    $SizeBytes        = 40GB,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('Format')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateSet('VHD', 'VHDX')]
-    $VHDFormat        = 'VHD',
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('DiskType')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateSet('Dynamic', 'Fixed')]
-    $VHDType          = 'Dynamic',
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('Unattend')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({
-          Test-Path -Path $(Resolve-Path $_)
-        }
-    )]
-    $UnattendPath,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    $Feature,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Alias('SKU')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    $Edition,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Parameter(ParameterSetName = 'UI')]
-    [string]
-    $BCDBoot          = 'bcdboot.exe',
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Parameter(ParameterSetName = 'UI')]
-    [switch]
-    $Passthru,
-
-    [Parameter(ParameterSetName = 'UI')]
-    [switch]
-    $ShowUI,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Parameter(ParameterSetName = 'UI')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateSet('None', 'Serial', '1394', 'USB', 'Local', 'Network')]
-    $EnableDebugger = 'None',
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateSet('MBR', 'GPT')]
-    $VHDPartitionStyle = 'MBR',
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateSet('NativeBoot', 'VirtualMachine')]
-    $BCDinVHD = 'VirtualMachine',
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Switch]
-    $ExpandOnNativeBoot = $true,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [Switch]
-    $RemoteDesktopEnable = $False,
-
-    [Parameter(ParameterSetName = 'SRC')]
-    [string]
-    [ValidateNotNullOrEmpty()]
-    [ValidateScript({
-          Test-Path -Path $(Resolve-Path $_)
-        }
-    )]
-    $Driver
-
-  )
-  #$psboundparameters
-
-  . "$($PSScriptRoot)\Convert-WindowsImage.ps1" @psboundparameters
-}
+  . "$($PSScriptRoot)\Convert-WindowsImage.ps1" 
+#endregion
 
 #Creates fully patched and compatcted CORE VHDX and Fully Patched GUI WIM with -Features installed. and Places them in -OutPath 
 function Start-ImageBuild
@@ -268,7 +144,7 @@ function Start-ImageBuild
     $CwiParamaters = @{
       SourcePath        = $IsoPath
       VHDPath           = "$WorkingFolder\$vhdFile"
-      SizeBytes         = 40GB
+      #SizeBytes         = 40GB
       VHDFormat         = 'VHDX'
       VHDPartitionStyle = 'GPT'
       VHDType           = 'Dynamic'
@@ -276,11 +152,11 @@ function Start-ImageBuild
       Edition           = $UseEdition
     }
     $CwiParamaters |Format-Table
-        
+       
     Write-Verbose -Message 'Creating VHDX from ISO' 
     #. "$($PSScriptRoot)\Convert-WindowsImage.ps1" @Paramaters -Passthru 
-    Convert-WindowsImage  @CwiParamaters -Passthru 
-    
+    Convert-WindowsImage  @CwiParamaters -Passthru
+    break
     if (-not (Test-Path -Path "$WorkingFolder\Mount" )) 
     {
       mkdir -Path "$WorkingFolder\Mount" -Verbose
