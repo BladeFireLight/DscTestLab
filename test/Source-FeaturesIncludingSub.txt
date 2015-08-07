@@ -1,4 +1,0 @@
-DNS
-DHCP
-File-Services
-RSAT.
