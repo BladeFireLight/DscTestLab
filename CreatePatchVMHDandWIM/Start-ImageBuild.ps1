@@ -22,35 +22,30 @@ function Start-ImageBuild
         # ISO Path
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [Alias('ip')] 
+        [Alias('ip')]
+        [ValidateScript({ Test-Path $_ -PathType Leaf })]
         [String]
         $IsoPath,
 
         # VMSwitch to attach to
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [Alias('vs')] 
+        [Alias('vs')]
+        [ValidateScript({Get-VMSwitch $_})]
         [String]
         $VmSwitch,
         
-        # Create WIM Only
-        [switch]
-        $WimOnly,
+        # Prefix of VHDX to Create in adition to Source.WIM. Aproprately prefixed scripts and txt files will need to exist
+        [String[]]
+        $VmPrefix,
 
         # Iso Core Edition
-        [int]
         [Alias('CoreEdition')] 
         $IsoCoreEdition = 3,
 
         # Iso GUI Edition
-        [int]
         [Alias('GuiEdition')] 
         $IsoGuiEdition = 4,
-
-        #features used by get-windowsFeature that you want installed on the WIM
-        # [string]
-        # [ValidateNotNullOrEmpty()]
-        # $Feature,
 
         #Save patched vhdx for use with update-ImageBuild
         [switch]
@@ -77,10 +72,6 @@ function Start-ImageBuild
             Write-Verbose -Message "Creating $WorkingFolder" 
             New-Item -ItemType directory -Path $WorkingFolder -ErrorAction Stop
         }
-        Write-Verbose -Message "Testing $VmSwitch" 
-        $null = Get-VMSwitch $VmSwitch -ErrorAction Stop
-        Write-Verbose -Message "Testing $IsoPath" 
-        $null = Test-Path -Path $IsoPath -ErrorAction stop
         Write-Verbose -Message "Testing $PSScriptRoot\unattend.xml" 
         $null = Test-Path -Path $PSScriptRoot\unattend.xml -ErrorAction stop
         Write-Verbose -Message "Testing $PSScriptRoot\Convert-WindowsImage.ps1" 
@@ -93,18 +84,21 @@ function Start-ImageBuild
         throw 'Input validation failed'
     }
     #endregion
+    $vmSet = @('Source')
+    foreach ($Prefix in $VmPrefix)
+    {
+        $vmSet += $Prefix
+    }
 
+    #if (-not ($VmPrefix)) 
+    #{
+    #    $vmSet += 'Source'
+    #}
+    #else 
+    #{
+    #    $vmSet += 'Source', $VmPrefix
+    #}
     
-    
-    if ($WimOnly) 
-    {
-        $vmSet = 'Source'
-    }
-    else 
-    {
-        $vmSet = 'Source', 'Template'
-    }
-  
     foreach ($vmType in $vmSet ) 
     {
         #region Create VM
@@ -132,7 +126,7 @@ function Start-ImageBuild
 
         Write-Verbose -Message "Start creation of $vmType" 
 
-        if ($vmType -eq 'Template') 
+        if ($vmType -ne 'Source') 
         {
             $UseEdition = $IsoCoreEdition
         }
@@ -155,7 +149,7 @@ function Start-ImageBuild
         Write-Verbose -Message 'Creating VHDX from ISO' 
         #. "$($PSScriptRoot)\Convert-WindowsImage.ps1" @Paramaters -Passthru 
         Convert-WindowsImage  @CwiParamaters -Passthru
-        break
+        
         if (-not (Test-Path -Path "$WorkingFolder\Mount" )) 
         {
             mkdir -Path "$WorkingFolder\Mount" -Verbose
@@ -193,7 +187,7 @@ function Start-ImageBuild
         #endregion
     
         #region Sysprep
-        if ($vmType -eq 'Template')
+        if ($vmType -ne 'Source')
         {
             Write-Verbose -Message "Copying $($vmType)_Patch.vhdx to$($vmType)_Sysprep.vhdx"
             Copy-Item -Path "$WorkingFolder\$($vmType)_Patch.vhdx" -Destination "$WorkingFolder\$($vmType)_Sysprep.vhdx" -Force -Verbose
@@ -226,7 +220,7 @@ function Start-ImageBuild
         Dismount-WindowsImage -Path "$WorkingFolder\Mount" -Discard -Verbose
 
 
-        if ($vmType -eq 'Template')
+        if ($vmType -ne 'Source')
         {
             $vhdFile = "$($vmType)_Sysprep.vhdx"
             $CwiParamaters = @{
@@ -287,6 +281,6 @@ Start-Transcript -Path $env:ALLUSERSPROFILE\logs\ImageBuild.log -Force
 # Production
 #Start-ImageBuild -OutPath 'D:\BuildOut' -WorkingFolder 'd:\BuildWorking' -IsoPath 'D:\ISO\WindowsServer\Win_Svr_2012_R2_64Bit_English.ISO' -VmSwitch Isolated1 -Verbose
 # Lab
-Start-ImageBuild -OutPath 'g:\BuildOut' -WorkingFolder 'G:\BuildWorking' -IsoPath 'C:\iso\Server2012R2.ISO' -VmSwitch TestLab -Verbose
+Start-ImageBuild -VmPrefix 'Template', 'GUITemplate' -OutPath 'g:\BuildOut' -WorkingFolder 'G:\BuildWorking' -IsoPath 'C:\iso\Server2012R2.ISO' -VmSwitch TestLab -Verbose
 
 Stop-Transcript

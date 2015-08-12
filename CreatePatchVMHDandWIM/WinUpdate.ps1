@@ -1,7 +1,5 @@
 #requires -Version 2
-Function Add-WindowsUpdate
-
-{
+Function Add-WindowsUpdate {
   [CmdletBinding()]
   param (
     [string]$Criteria = "IsInstalled=0 and Type='Software' and IsHidden=0" , 
